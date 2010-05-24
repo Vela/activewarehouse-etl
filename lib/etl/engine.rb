@@ -14,6 +14,7 @@ module ETL #:nodoc:
       # * <tt>:limit</tt>: Limit the number of records returned from sources
       # * <tt>:offset</tt>: Specify the records for data from sources
       # * <tt>:log_write_mode</tt>: If true then the log will write, otherwise it will append
+      # * <tt>:log_level</tt>: Log level to use (default INFO)
       # * <tt>:skip_bulk_import</tt>: Set to true to skip bulk import
       # * <tt>:read_locally</tt>: Set to true to read from the local cache
       # * <tt>:rails_root</tt>: Set to the rails root to boot rails
@@ -23,6 +24,7 @@ module ETL #:nodoc:
           @limit = options[:limit]
           @offset = options[:offset]
           @log_write_mode = 'w' if options[:newlog]
+          @log_level = options[:log_level]
           @skip_bulk_import = options[:skip_bulk_import]
           @read_locally = options[:read_locally]
           @rails_root = options[:rails_root]
@@ -33,7 +35,7 @@ module ETL #:nodoc:
           database_configuration = YAML::load(ERB.new(IO.read(options[:config])).result + "\n")
           ActiveRecord::Base.configurations.merge!(database_configuration)
           ETL::Base.configurations = database_configuration
-          #puts "configurations in init: #{ActiveRecord::Base.configurations.inspect}"
+          logger.debug "configurations in init: #{ActiveRecord::Base.configurations.inspect}"
           
           require 'etl/execution'
           ETL::Execution::Base.establish_connection :etl_execution
@@ -63,6 +65,11 @@ module ETL #:nodoc:
         @log_write_mode ||= 'a'
       end
       
+      attr_accessor :log_level
+      def log_level
+        @log_level ||= Logger::INFO
+      end
+      
       # A logger for the engine
       attr_accessor :logger
       
@@ -73,7 +80,7 @@ module ETL #:nodoc:
           else
             @logger = Logger.new(File.open('etl.log', log_write_mode))
           end
-          @logger.level = Logger::WARN
+          @logger.level = log_level
           @logger.formatter = Logger::Formatter.new
         end
         @logger
@@ -300,7 +307,15 @@ module ETL #:nodoc:
       execute_dependencies(control)
       
       start_time = Time.now
-      pre_process(control)
+      begin
+        pre_process(control)
+      rescue => e
+        msg = "Error in pre_process: #{e}"
+        errors << msg
+        e.backtrace.each { |line| msg << "\n  #{line}" }
+        Engine.logger.error msg
+        raise e
+      end
       sources = control.sources
       destinations = control.destinations
       
@@ -401,8 +416,8 @@ module ETL #:nodoc:
               destinations.each_with_index do |destination, index|
                 Engine.current_destination = destination
                 rows.each do |row|
-                  destination.write(row)
-                  Engine.rows_written += 1 if index == 0
+                  wrote = destination.write(row)
+                  Engine.rows_written += wrote if index == 0
                 end
               end
             rescue => e
@@ -440,7 +455,15 @@ module ETL #:nodoc:
         say "Screens passed"
       end
       
-      post_process(control)
+      begin
+        post_process(control)
+      rescue => e
+        msg = "Error in post_process: #{e}"
+        errors << msg
+        e.backtrace.each { |line| msg << "\n  #{line}" }
+        Engine.logger.error msg
+        raise e
+      end
       
       if sources.length > 0
         say_on_own_line "Read #{Engine.rows_read} lines from sources"

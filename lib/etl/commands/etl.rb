@@ -39,7 +39,8 @@ def execute
     [ '--newlog', '-n', GetoptLong::NO_ARGUMENT ],
     [ '--skip-bulk-import', '-s', GetoptLong::NO_ARGUMENT ],
     [ '--read-locally', GetoptLong::NO_ARGUMENT],
-    [ '--rails-root', GetoptLong::REQUIRED_ARGUMENT]
+    [ '--rails-root', GetoptLong::REQUIRED_ARGUMENT],
+    [ '--log-level', GetoptLong::REQUIRED_ARGUMENT]
   )
   
   options = {}
@@ -68,6 +69,10 @@ def execute
     when '--rails-root'
       options[:rails_root] = arg
       puts "rails root set to #{options[:rails_root]}"
+    when '--log-level'
+      raise "#{arg} is not a valid logging level in Ruby!" unless Logger.constants.include?(arg)
+      options[:log_level] = Logger.const_get(arg)
+      puts "log level set to #{options[:log_level]}"
     end
   end
 
