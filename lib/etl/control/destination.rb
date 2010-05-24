@@ -61,10 +61,13 @@ module ETL #:nodoc:
       
       # Write the given row
       def write(row)
+        before = buffer.length
         if @condition.nil? || @condition.call(row)
           process_change(row)
         end
+        after = buffer.length
         flush if buffer.length >= buffer_size
+        after - before ? 1 : 0
       end
       
       # Abstract method
@@ -186,7 +189,7 @@ module ETL #:nodoc:
       # Get the dimension table if specified
       def dimension_table
         @dimension_table ||= if scd?
-          ETL::Engine.table(configuration[:scd][:dimension_table], dimension_target) or raise ConfigurationError, "dimension_table setting required" 
+          ETL::Engine.table(configuration[:scd][:dimension_table], ETL::Engine.connection(dimension_target)) or raise ConfigurationError, "dimension_table setting required" 
         end
       end
       
@@ -217,6 +220,8 @@ module ETL #:nodoc:
         # to process). If they do not match then the record is an
         # 'update'. If the record doesn't exist then it is an 'insert'
         ETL::Engine.logger.debug "Checking record for SCD change"
+        # establishes (or re-establishes) ActiveRecord::Base's connection to the db where the dimension table lives
+        ActiveRecord::Base.establish_connection(ETL::Base.configurations[dimension_target.to_s])
         if @existing_row = preexisting_row(row)
           if has_scd_field_changes?(row)
             process_scd_change(row)
@@ -313,7 +318,8 @@ module ETL #:nodoc:
           
           ETL::Engine.logger.debug "expiring original record"
           @existing_row[scd_end_date_field] = @timestamp
-          @existing_row[scd_latest_version_field] = false
+          #@existing_row[scd_latest_version_field] = false
+          @existing_row[scd_latest_version_field] = 0
           
           buffer << @existing_row
 
@@ -366,7 +372,7 @@ module ETL #:nodoc:
         q = "SELECT * FROM #{dimension_table} WHERE #{natural_key_equality_for_row(row)}"
         q << " AND #{scd_latest_version_field}" if scd_type == 2
         
-        ETL::Engine.logger.debug "looking for original record"
+        ETL::Engine.logger.debug "looking for original record with #{q}"
         result = connection.select_one(q)
         
         ETL::Engine.logger.debug "Result: #{result.inspect}"
@@ -381,7 +387,7 @@ module ETL #:nodoc:
           ETL::Engine.logger.debug "Row: #{row.inspect}"
           ETL::Engine.logger.debug "Existing Row: #{@existing_row.inspect}"
           ETL::Engine.logger.debug "comparing: #{row[csd_field].to_s} != #{@existing_row[csd_field].to_s}"
-          x=row[csd_field].to_s != @existing_row[csd_field].to_s 
+          x=row[csd_field].to_s != @existing_row[csd_field].to_s.delete("\000") 
           ETL::Engine.logger.debug x
           x
         }
@@ -390,7 +396,7 @@ module ETL #:nodoc:
       # Check whether non-scd fields have changed since the last
       # load of this record.
       def has_non_scd_field_changes?(row)
-        non_scd_fields(row).any? { |non_csd_field| row[non_csd_field].to_s != @existing_row[non_csd_field].to_s }
+        non_scd_fields(row).any? { |non_csd_field| row[non_csd_field].to_s != @existing_row[non_csd_field].to_s.delete("\000") }
       end
       
       # Grab, or re-use, a database connection for running queries directly
@@ -406,7 +412,7 @@ module ETL #:nodoc:
       def delete_outdated_record
         ETL::Engine.logger.debug "deleting old row"
         
-        q = "DELETE FROM #{dimension_table} WHERE #{primary_key} = #{@existing_row[primary_key]}"
+        q = ActiveRecord::Base.send(:sanitize_sql_array, ["DELETE FROM #{dimension_table} WHERE #{primary_key} = ?", *@existing_row[primary_key]])
         connection.delete(q)
       end
       
@@ -417,7 +423,8 @@ module ETL #:nodoc:
         if scd_type == 2
           row[scd_effective_date_field] = @timestamp
           row[scd_end_date_field] = '9999-12-31 00:00:00'
-          row[scd_latest_version_field] = true
+          #row[scd_latest_version_field] = true
+          row[scd_latest_version_field] = 1
         end
         buffer << row
       end
