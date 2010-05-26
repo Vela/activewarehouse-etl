@@ -15,6 +15,8 @@ module ETL #:nodoc:
       # * <tt>:offset</tt>: Specify the records for data from sources
       # * <tt>:log_write_mode</tt>: If true then the log will write, otherwise it will append
       # * <tt>:log_level</tt>: Log level to use (default INFO)
+      # * <tt>:log_path</tt>: folder under which to create the log file (must already exist)
+      # * <tt>:timestamped_log</tt>: If true, the log file name created uses a timestamp in the name (implies log_write_mode = true)
       # * <tt>:skip_bulk_import</tt>: Set to true to skip bulk import
       # * <tt>:read_locally</tt>: Set to true to read from the local cache
       # * <tt>:rails_root</tt>: Set to the rails root to boot rails
@@ -28,6 +30,8 @@ module ETL #:nodoc:
           @skip_bulk_import = options[:skip_bulk_import]
           @read_locally = options[:read_locally]
           @rails_root = options[:rails_root]
+          @timestamped_log = options[:timestamp_log]
+          @log_path = options.has_key?(:log_path) ? options[:log_path] + "/" : nil
           
           require File.join(@rails_root, 'config/environment') if @rails_root
           options[:config] ||= 'database.yml'
@@ -58,6 +62,8 @@ module ETL #:nodoc:
       end
       
       attr_accessor :timestamped_log
+
+      attr_accessor :log_path
       
       # Accessor for the log write mode. Default is 'a' for append.
       attr_accessor :log_write_mode
@@ -76,9 +82,9 @@ module ETL #:nodoc:
       def logger #:nodoc:
         unless @logger
           if timestamped_log
-            @logger = Logger.new("etl_#{timestamp}.log")
+            @logger = Logger.new("#{log_path}etl_#{timestamp}.log")
           else
-            @logger = Logger.new(File.open('etl.log', log_write_mode))
+            @logger = Logger.new(File.open("#{log_path}etl.log", log_write_mode))
           end
           @logger.level = log_level
           @logger.formatter = Logger::Formatter.new

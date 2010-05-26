@@ -40,7 +40,9 @@ def execute
     [ '--skip-bulk-import', '-s', GetoptLong::NO_ARGUMENT ],
     [ '--read-locally', GetoptLong::NO_ARGUMENT],
     [ '--rails-root', GetoptLong::REQUIRED_ARGUMENT],
-    [ '--log-level', GetoptLong::REQUIRED_ARGUMENT]
+    [ '--log-level', GetoptLong::REQUIRED_ARGUMENT],
+    [ '--log-path', GetoptLong::REQUIRED_ARGUMENT],
+    [ '--timestamp-log', GetoptLong::NO_ARGUMENT]
   )
   
   options = {}
@@ -73,6 +75,13 @@ def execute
       raise "#{arg} is not a valid logging level in Ruby!" unless Logger.constants.include?(arg)
       options[:log_level] = Logger.const_get(arg)
       puts "log level set to #{options[:log_level]}"
+    when '--log-path'
+      raise "The folder #{arg} does not exist!" unless File.exists?(arg)
+      options[:log_path] = arg
+      puts "log path set to #{options[:log_path]}"
+    when '--timestamp-log'
+      puts "timestamped log file enabled"
+      options[:timestamp_log] = true
     end
   end
 
