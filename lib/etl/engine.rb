@@ -168,7 +168,7 @@ module ETL #:nodoc:
       def finish
         temp_tables.each do |temp_table, mapping|
           actual_table = mapping[:table]
-          #puts "move #{temp_table} to #{actual_table}"
+          ETL::Engine.logger.info "move #{temp_table} to #{actual_table}"
           conn = mapping[:connection]
           conn.transaction do
             conn.rename_table(actual_table, "#{actual_table}_old")
