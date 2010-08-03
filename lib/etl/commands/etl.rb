@@ -26,7 +26,19 @@ require 'getoptlong'
 
 # Print a usage statement
 def usage #:nodoc:
-  puts "Usage: etl file [file file ...]" # TODO: add the command line options
+  puts "Usage: etl [OPTION] file [file file ...]" # TODO: add the command line options
+  puts "--version               show the version information"
+  puts "--help                  prints this message"
+  puts "--config, -c FILE       use FILE as the configuration file"
+  puts "--limit, -l #           limit the number of records returned from sources to #"
+  puts "--offset, -o #          start at the specified offset # when reading from the source"
+  puts "--newlog, -n            start a new log file (default appends to existing log file)"
+  puts "--skip-bulk-import, -s  skip the bulk import at the end of the run"
+  puts "--read-locally          get input data from last (successful) extraction"
+  puts "--rails-root            set the root for a rails environment"
+  puts "--log-level LEVEL       set the log level to LEVEL (default INFO)"
+  puts "--log-path PATH         create the log file in the specified directory (directory must exist)"
+  puts "--timestamp-log         add a timestamp to the log file name"
 end
 
 def execute
