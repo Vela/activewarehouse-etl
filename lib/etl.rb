@@ -25,11 +25,14 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #++
 
+require 'rubygems'
+
+gem 'activesupport', "< 3.0.0"
+gem 'activerecord', "< 3.0.0"
+
 require 'logger'
 require 'yaml'
 require 'erb'
-
-require 'rubygems'
 
 unless defined?(REXML::VERSION)
   require 'rexml/rexml'

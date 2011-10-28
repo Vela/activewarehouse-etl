@@ -21,8 +21,8 @@ Gem::Specification.new do |s|
   s.summary = %q{Pure Ruby ETL package.}
 
   s.add_dependency(%q<rake>, [">= 0.7.1"])
-  s.add_dependency(%q<activesupport>, [">= 1.3.1"])
-  s.add_dependency(%q<activerecord>, [">= 1.14.4"])
+  s.add_dependency(%q<activesupport>, [">= 1.3.1", "< 3.0.0"])
+  s.add_dependency(%q<activerecord>, [">= 1.14.4", "< 3.0.0"])
   s.add_dependency(%q<fastercsv>, [">= 1.2.0"])
   s.add_dependency(%q<adapter_extensions>, [">= 0.1.0"])
 end

@@ -26,7 +26,7 @@ require 'getoptlong'
 
 # Print a usage statement
 def usage #:nodoc:
-  puts "Usage: etl [OPTION] file [file file ...]" # TODO: add the command line options
+  puts "Usage: etl [OPTION] File [file file ...]" # TODO: add the command line options
   puts "--version               show the version information"
   puts "--help                  prints this message"
   puts "--config, -c FILE       use FILE as the configuration file"
